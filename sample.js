@@ -1,7 +1,6 @@
 'use strict';
 
 const yelp = require('yelp-fusion');
-const rp = require('request-promise');
 
 // Place holder for Yelp Fusion's API Key. Grab them
 // from https://www.yelp.com/developers/v3/manage_app
@@ -15,29 +14,36 @@ const searchRequest = {
 const client = yelp.client(apiKey);
 let arr = [];
 
-client.search(searchRequest).then(response => {
-  const firstResult = response.jsonBody.businesses;
+async function yelp_fusion() {
+  await client.search(searchRequest).then(async response => {
+    const firstResult = response.jsonBody.businesses;
 
-  console.log(firstResult.length)
-  for (let i = 1; i < firstResult.length; i++) {
+    for (let i = 0; i < firstResult.length; i++) {
 
-    const searchRequest2 = {
-      alias: `${firstResult[i].alias}`
-    };
+      let obj = { "business name": firstResult[i].name, "business address": firstResult[i].location.display_address };
 
-    client.search(searchRequest2).then(response2 => {
-      console.log("response2====",response2.jsonBody.businesses)
-    }).catch(e => {
-      console.log(e);
-    });
-    arr.push(firstResult[i]);
-    if (i == 5) {
-      break;
+      await client.reviews(`${firstResult[i].alias}`).then(async response => {
+        let temp_arr = [];
+
+        for (let j = 0; j < response.jsonBody.reviews.length; j++) {
+          temp_arr.push({ "text": response.jsonBody.reviews[j].text, "name": response.jsonBody.reviews[j].user.name });
+        }
+        obj.reviews = temp_arr
+      }).catch(error => {
+        console.log(error);
+      });
+      arr.push(obj);
+      // console.log("obj=====================",obj)
+
+      if (i == 4) {
+        break;
+      }
     }
-  }
-
-  const prettyJson = JSON.stringify(arr, null, 4);
-  console.log(prettyJson);
-}).catch(e => {
-  console.log(e);
-});
+    // console.log(arr)
+    const prettyJson = JSON.stringify(arr, " ", 4);
+    console.log(prettyJson);
+  }).catch(error => {
+    console.log(error);
+  });
+}
+yelp_fusion();
